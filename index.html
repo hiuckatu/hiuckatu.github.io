@@ -52,8 +52,8 @@ input[type=time]{font:inherit;color:inherit;background:var(--bg);border:1px soli
 .colors input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 textarea{display:block;width:100%;min-height:64px;margin:0 0 14px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;resize:vertical}
 textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#trash{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:10px 16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
-#trash[aria-pressed="true"]{background:var(--surface);color:var(--ink);border-color:var(--accent)}
+#qr{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#fff;padding:10px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5;line-height:0}
+#qr[hidden]{display:none}
 @media (max-width:600px){.app{padding:10px}.cell{min-height:64px;padding:3px}.ev{font-size:0;height:6px;padding:0;border:0;background:var(--c);border-radius:3px}.num{width:22px;height:22px;font-size:.8rem}h1{font-size:1.3rem}}
 </style>
 </head>
@@ -78,7 +78,8 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </form>
   </section>
 </div>
-<button id="trash" type="button" hidden aria-pressed="false"></button>
+<div id="qr" hidden role="img" aria-label="ゴミの日のQRコード"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
 const KEY='calendar-events-v1';
@@ -89,7 +90,13 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(events))}catch(e){}}
 let memos={};
 try{memos=JSON.parse(localStorage.getItem('calendar-memos-v1')||'{}')}catch(e){memos={}}
 function saveMemos(){try{localStorage.setItem('calendar-memos-v1',JSON.stringify(memos))}catch(e){}}
-function updateBtn(){const m=memos[sel]||{};const b=document.getElementById('trash');b.hidden=!(m.t||'').includes('ゴミの日');b.textContent=m.d?'ゴミ出し済み ✓':'ゴミ出しした';b.setAttribute('aria-pressed',String(!!m.d))}
+let qrText='';
+function updateBtn(){const m=memos[sel]||{};const t=m.t||'';const box=document.getElementById('qr');
+if(!t.includes('ゴミの日')||typeof QRCode==='undefined'){box.hidden=true;return}
+box.hidden=false;
+if(t===qrText)return;
+qrText=t;
+try{box.innerHTML='';new QRCode(box,{text:unescape(encodeURIComponent(t)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const now=new Date();
@@ -156,7 +163,6 @@ $('list').addEventListener('click',e=>{
   save();render();
 });
 $('memo').addEventListener('input',e=>{const t=e.target.value;const o=memos[sel]||{};if(t.trim())memos[sel]={t,d:o.d};else delete memos[sel];saveMemos();updateBtn()});
-$('trash').addEventListener('click',()=>{const o=memos[sel];if(!o)return;o.d=!o.d;saveMemos();updateBtn()});
 render();
 </script>
 </body>
