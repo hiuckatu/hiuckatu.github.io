@@ -54,6 +54,11 @@ textarea{display:block;width:100%;min-height:64px;margin:0 0 14px;font:inherit;c
 textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #qr{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#fff;padding:10px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5;line-height:0}
 #qr[hidden]{display:none}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.dayhead h2{margin:0}
+#trashBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tr{font-size:.7rem;color:var(--accent);white-space:nowrap}
+@media (max-width:600px){.trt{display:none}}
 @media (max-width:600px){.app{padding:10px}.cell{min-height:64px;padding:3px}.ev{font-size:0;height:6px;padding:0;border:0;background:var(--c);border-radius:3px}.num{width:22px;height:22px;font-size:.8rem}h1{font-size:1.3rem}}
 </style>
 </head>
@@ -67,7 +72,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   </header>
   <div class="grid" id="grid" role="grid"></div>
   <section class="panel" aria-live="polite">
-    <h2 id="dayTitle"></h2>
+    <div class="dayhead"><h2 id="dayTitle"></h2><button id="trashBtn" type="button" aria-pressed="false"></button></div>
     <ul class="list" id="list"></ul>
     <textarea id="memo" placeholder="この日のメモ（例：ゴミの日）" maxlength="300" aria-label="この日のメモ"></textarea>
     <form id="form">
@@ -90,13 +95,19 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(events))}catch(e){}}
 let memos={};
 try{memos=JSON.parse(localStorage.getItem('calendar-memos-v1')||'{}')}catch(e){memos={}}
 function saveMemos(){try{localStorage.setItem('calendar-memos-v1',JSON.stringify(memos))}catch(e){}}
+let trash={},hadTrash=false;
+try{const s=localStorage.getItem('calendar-trash-v1');hadTrash=s!==null;trash=JSON.parse(s||'{}')}catch(e){trash={}}
+if(!hadTrash)Object.keys(memos).forEach(k=>{if(((memos[k]||{}).t||'').includes('ゴミの日'))trash[k]=true});
+function saveTrash(){try{localStorage.setItem('calendar-trash-v1',JSON.stringify(trash))}catch(e){}}
 let qrText='';
 function updateBtn(){const m=memos[sel]||{};const t=m.t||'';const box=document.getElementById('qr');
-if(!t.includes('ゴミの日')||typeof QRCode==='undefined'){box.hidden=true;return}
+const on=!!trash[sel];const tb=document.getElementById('trashBtn');tb.setAttribute('aria-pressed',String(on));tb.textContent=on?'ゴミの日を解除':'ゴミの日にする';
+if(!on||typeof QRCode==='undefined'){box.hidden=true;return}
 box.hidden=false;
-if(t===qrText)return;
-qrText=t;
-try{box.innerHTML='';new QRCode(box,{text:unescape(encodeURIComponent(t)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
+const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(t?'\n'+t:'');
+if(q===qrText)return;
+qrText=q;
+try{box.innerHTML='';new QRCode(box,{text:unescape(encodeURIComponent(q)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const now=new Date();
@@ -126,7 +137,7 @@ function render(){
     if(d.getDay()===6)cls.push('sat');
     const shown=list.slice(0,3).map(e=>`<div class="ev" style="--c:${e.c}">${e.t?e.t+' ':''}${esc(e.n)}</div>`).join('');
     const more=list.length>3?`<div class="more">ほか${list.length-3}件</div>`:'';
-    h+=`<div class="${cls.join(' ')}" role="gridcell" tabindex="0" data-d="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日 予定${list.length}件"><span class="num">${d.getDate()}</span>${shown}${more}</div>`;
+    h+=`<div class="${cls.join(' ')}" role="gridcell" tabindex="0" data-d="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日 予定${list.length}件"><span class="num">${d.getDate()}</span>${trash[k]?'<span class="tr">🗑<span class="trt"> ゴミの日</span></span>':''}${shown}${more}</div>`;
   }
   $('grid').innerHTML=h;
   renderDay();
@@ -163,6 +174,7 @@ $('list').addEventListener('click',e=>{
   save();render();
 });
 $('memo').addEventListener('input',e=>{const t=e.target.value;const o=memos[sel]||{};if(t.trim())memos[sel]={t,d:o.d};else delete memos[sel];saveMemos();updateBtn()});
+$('trashBtn').addEventListener('click',()=>{if(trash[sel])delete trash[sel];else trash[sel]=true;saveTrash();render()});
 render();
 </script>
 </body>
