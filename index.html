@@ -54,10 +54,15 @@ textarea{display:block;width:100%;min-height:64px;margin:0 0 14px;font:inherit;c
 textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #qr{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#fff;padding:10px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5;line-height:0}
 #qr[hidden]{display:none}
+#qr{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#qr.drag{cursor:grabbing}
 .dayhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .dayhead h2{margin:0}
 #trashBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .tr{font-size:.7rem;color:var(--accent);white-space:nowrap}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+#qr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#qrClose{width:40px;height:40px;padding:0;border-radius:50%;font-size:1.5rem;line-height:1;background:#eef1f5;color:#1c2733;border:1px solid #c9d2dc}
 @media (max-width:600px){.trt{display:none}}
 @media (max-width:600px){.app{padding:10px}.cell{min-height:64px;padding:3px}.ev{font-size:0;height:6px;padding:0;border:0;background:var(--c);border-radius:3px}.num{width:22px;height:22px;font-size:.8rem}h1{font-size:1.3rem}}
 </style>
@@ -72,7 +77,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   </header>
   <div class="grid" id="grid" role="grid"></div>
   <section class="panel" aria-live="polite">
-    <div class="dayhead"><h2 id="dayTitle"></h2><button id="trashBtn" type="button" aria-pressed="false"></button></div>
+    <div class="dayhead"><h2 id="dayTitle"></h2><span class="btns"><button id="qrBtn" type="button" hidden></button><button id="trashBtn" type="button" aria-pressed="false"></button></span></div>
     <ul class="list" id="list"></ul>
     <textarea id="memo" placeholder="この日のメモ（例：ゴミの日）" maxlength="300" aria-label="この日のメモ"></textarea>
     <form id="form">
@@ -83,7 +88,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </form>
   </section>
 </div>
-<div id="qr" hidden role="img" aria-label="ゴミの日のQRコード"></div>
+<div id="qr" hidden><button id="qrClose" type="button" aria-label="QRコードを隠す">×</button><div id="qrimg" role="img" aria-label="ゴミの日のQRコード"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
@@ -99,15 +104,16 @@ let trash={},hadTrash=false;
 try{const s=localStorage.getItem('calendar-trash-v1');hadTrash=s!==null;trash=JSON.parse(s||'{}')}catch(e){trash={}}
 if(!hadTrash)Object.keys(memos).forEach(k=>{if(((memos[k]||{}).t||'').includes('ゴミの日'))trash[k]=true});
 function saveTrash(){try{localStorage.setItem('calendar-trash-v1',JSON.stringify(trash))}catch(e){}}
-let qrText='';
+let qrText='';let qrHidden=false;try{qrHidden=localStorage.getItem('calendar-qrhidden-v1')==='1'}catch(e){}
 function updateBtn(){const m=memos[sel]||{};const t=m.t||'';const box=document.getElementById('qr');
 const on=!!trash[sel];const tb=document.getElementById('trashBtn');tb.setAttribute('aria-pressed',String(on));tb.textContent=on?'ゴミの日を解除':'ゴミの日にする';
-if(!on||typeof QRCode==='undefined'){box.hidden=true;return}
+const qb=document.getElementById('qrBtn');qb.hidden=!on;qb.textContent=qrHidden?'QRを表示':'QRを隠す';
+if(!on||qrHidden||typeof QRCode==='undefined'){box.hidden=true;return}
 box.hidden=false;
 const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(t?'\n'+t:'');
 if(q===qrText)return;
 qrText=q;
-try{box.innerHTML='';new QRCode(box,{text:unescape(encodeURIComponent(q)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
+try{const im=document.getElementById('qrimg');im.innerHTML='';new QRCode(im,{text:unescape(encodeURIComponent(q)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const now=new Date();
@@ -175,6 +181,22 @@ $('list').addEventListener('click',e=>{
 });
 $('memo').addEventListener('input',e=>{const t=e.target.value;const o=memos[sel]||{};if(t.trim())memos[sel]={t,d:o.d};else delete memos[sel];saveMemos();updateBtn()});
 $('trashBtn').addEventListener('click',()=>{if(trash[sel])delete trash[sel];else trash[sel]=true;saveTrash();render()});
+function toggleQr(){qrHidden=!qrHidden;try{localStorage.setItem('calendar-qrhidden-v1',qrHidden?'1':'0')}catch(e){}updateBtn()}
+$('qrBtn').addEventListener('click',toggleQr);$('qrClose').addEventListener('click',toggleQr);
+(function(){
+const box=$('qr');let pos=null;
+try{pos=JSON.parse(localStorage.getItem('calendar-qrpos-v1')||'null')}catch(e){}
+function clamp(x,y){const w=box.offsetWidth||140,h=box.offsetHeight||140;return [Math.min(Math.max(0,x),Math.max(0,innerWidth-w)),Math.min(Math.max(0,y),Math.max(0,innerHeight-h))]}
+function apply(){if(!pos)return;const c=clamp(pos.x,pos.y);box.style.left=c[0]+'px';box.style.top=c[1]+'px';box.style.bottom='auto'}
+apply();
+let sx=0,sy=0,ox=0,oy=0,drag=false;
+box.addEventListener('pointerdown',e=>{if(e.target.closest('#qrClose'))return;const r=box.getBoundingClientRect();drag=true;sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;box.setPointerCapture(e.pointerId);box.classList.add('drag')});
+box.addEventListener('pointermove',e=>{if(!drag)return;const c=clamp(ox+e.clientX-sx,oy+e.clientY-sy);pos={x:c[0],y:c[1]};apply()});
+const end=()=>{if(!drag)return;drag=false;box.classList.remove('drag');if(pos){try{localStorage.setItem('calendar-qrpos-v1',JSON.stringify(pos))}catch(e){}}};
+box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
+box.addEventListener('dblclick',e=>{if(e.target.closest('#qrClose'))return;pos=null;box.style.left='';box.style.top='';box.style.bottom='';try{localStorage.removeItem('calendar-qrpos-v1')}catch(err){}});
+addEventListener('resize',apply);
+})();
 render();
 </script>
 </body>
