@@ -52,19 +52,44 @@ input[type=time]{font:inherit;color:inherit;background:var(--bg);border:1px soli
 .colors input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 textarea{display:block;width:100%;min-height:64px;margin:0 0 14px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;resize:vertical}
 textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#qr{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:#fff;padding:10px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5;line-height:0}
-#qr[hidden]{display:none}
-#qr{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
-#qr.drag{cursor:grabbing}
+#qr{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:opacity .3s ease,visibility .3s}
+#qr.show{opacity:1;visibility:visible}
+.qrbox{position:relative;background:#fff;padding:48px 20px 20px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);line-height:0;transform:scale(.94);transition:transform .3s ease}
+#qr.show .qrbox{transform:none}
+#qrcode img,#qrcode canvas{width:min(72vmin,320px)!important;height:min(72vmin,320px)!important}
+#qrClose{position:absolute;top:8px;right:8px;width:32px;height:32px;padding:0;display:grid;place-items:center;line-height:1;font-size:1.2rem;background:#eef1f5;color:#1c2733;border-color:#dde3ea;border-radius:50%}
+#qrOpen{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+@media (prefers-reduced-motion:reduce){#qr,.qrbox{transition:none}}
 .dayhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .dayhead h2{margin:0}
 #trashBtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .tr{font-size:.7rem;color:var(--accent);white-space:nowrap}
-.btns{display:flex;gap:6px;flex-wrap:wrap}
-#qr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-#qrClose{width:40px;height:40px;padding:0;border-radius:50%;font-size:1.5rem;line-height:1;background:#eef1f5;color:#1c2733;border:1px solid #c9d2dc}
 @media (max-width:600px){.trt{display:none}}
 @media (max-width:600px){.app{padding:10px}.cell{min-height:64px;padding:3px}.ev{font-size:0;height:6px;padding:0;border:0;background:var(--c);border-radius:3px}.num{width:22px;height:22px;font-size:.8rem}h1{font-size:1.3rem}}
+.gbar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-bottom:12px}
+.gbar label{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--sub)}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-width:100%}
+select:hover{border-color:var(--accent)}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center;font-size:.75rem;color:var(--sub)}
+.legend[hidden]{display:none}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:10px;height:10px;border-radius:50%;background:var(--g)}
+.legend i.rest{border:1px solid var(--sub)}
+.gb{display:flex;flex-wrap:wrap;gap:2px}
+.g{display:inline-block;font-size:.68rem;line-height:1.4;padding:0 6px;border-radius:999px;background:var(--g);color:#fff;white-space:nowrap}
+.g.rest{background:var(--line);color:var(--ink)}
+#gdetail{margin-bottom:14px}
+#gdetail:empty{display:none}
+.gh{font-size:.95rem;margin:0 0 8px}
+.gnone{color:var(--sub);margin:0 0 10px}
+#gdetail .list{margin-bottom:10px}
+.gsum{font-size:.85rem;color:var(--sub)}
+.gsum summary{cursor:pointer}
+.gsum dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:8px 0 0}
+.gsum dt{color:var(--ink)}
+.gsum dd{margin:0}
+@media (max-width:600px){.g{font-size:0;width:8px;height:8px;padding:0}}
 </style>
 </head>
 <body>
@@ -75,9 +100,14 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <button id="today">今日</button>
     <button id="next" aria-label="次の月">›</button>
   </header>
+  <div class="gbar">
+    <label>地区 <select id="district" aria-label="地区"></select></label>
+    <div class="legend" id="legend" hidden></div>
+  </div>
   <div class="grid" id="grid" role="grid"></div>
   <section class="panel" aria-live="polite">
-    <div class="dayhead"><h2 id="dayTitle"></h2><span class="btns"><button id="qrBtn" type="button" hidden></button><button id="trashBtn" type="button" aria-pressed="false"></button></span></div>
+    <div class="dayhead"><h2 id="dayTitle"></h2><button id="trashBtn" type="button" aria-pressed="false"></button></div>
+    <div id="gdetail"></div>
     <ul class="list" id="list"></ul>
     <textarea id="memo" placeholder="この日のメモ（例：ゴミの日）" maxlength="300" aria-label="この日のメモ"></textarea>
     <form id="form">
@@ -88,7 +118,10 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </form>
   </section>
 </div>
-<div id="qr" hidden><button id="qrClose" type="button" aria-label="QRコードを隠す">×</button><div id="qrimg" role="img" aria-label="ゴミの日のQRコード"></div></div>
+<div id="qr" role="dialog" aria-modal="true" aria-label="ゴミの日のQRコード" aria-hidden="true">
+  <div class="qrbox"><button id="qrClose" type="button" aria-label="QRコードを閉じる">✕</button><div id="qrcode" role="img" aria-label="ゴミの日のQRコード"></div></div>
+</div>
+<button id="qrOpen" type="button" hidden>QRを表示</button>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
@@ -104,16 +137,17 @@ let trash={},hadTrash=false;
 try{const s=localStorage.getItem('calendar-trash-v1');hadTrash=s!==null;trash=JSON.parse(s||'{}')}catch(e){trash={}}
 if(!hadTrash)Object.keys(memos).forEach(k=>{if(((memos[k]||{}).t||'').includes('ゴミの日'))trash[k]=true});
 function saveTrash(){try{localStorage.setItem('calendar-trash-v1',JSON.stringify(trash))}catch(e){}}
-let qrText='';let qrHidden=false;try{qrHidden=localStorage.getItem('calendar-qrhidden-v1')==='1'}catch(e){}
-function updateBtn(){const m=memos[sel]||{};const t=m.t||'';const box=document.getElementById('qr');
+let qrText='',qrHide=false;
+function setQR(v){const b=document.getElementById('qr');b.classList.toggle('show',v);b.setAttribute('aria-hidden',String(!v))}
+function updateBtn(){const m=memos[sel]||{};const t=m.t||'';
 const on=!!trash[sel];const tb=document.getElementById('trashBtn');tb.setAttribute('aria-pressed',String(on));tb.textContent=on?'ゴミの日を解除':'ゴミの日にする';
-const qb=document.getElementById('qrBtn');qb.hidden=!on;qb.textContent=qrHidden?'QRを表示':'QRを隠す';
-if(!on||qrHidden||typeof QRCode==='undefined'){box.hidden=true;return}
-box.hidden=false;
-const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(t?'\n'+t:'');
-if(q===qrText)return;
-qrText=q;
-try{const im=document.getElementById('qrimg');im.innerHTML='';new QRCode(im,{text:unescape(encodeURIComponent(q)),width:120,height:120,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.hidden=true;qrText=''}}
+const row=curRow(),c=row?collect(sel,row):null,auto=c&&c.t?c.t.map(x=>GT[x.i].n):[];
+const op=document.getElementById('qrOpen');
+if(!(on||auto.length)||typeof QRCode==='undefined'){setQR(false);op.hidden=true;return}
+const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(auto.length?'\n'+auto.join('・'):'')+(t?'\n'+t:'');
+if(q!==qrText){qrText=q;const cd=document.getElementById('qrcode');
+try{cd.innerHTML='';new QRCode(cd,{text:unescape(encodeURIComponent(q)),width:320,height:320,correctLevel:QRCode.CorrectLevel.L})}catch(e){setQR(false);op.hidden=true;qrText='';return}}
+setQR(!qrHide);op.hidden=!qrHide}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const now=new Date();
@@ -125,6 +159,51 @@ const $=id=>document.getElementById(id);
 $('colors').innerHTML=COLORS.map((c,i)=>`<label><input type="radio" name="col" value="${c}" ${i?'':'checked'} aria-label="色 ${i+1}"><span style="--c:${c}"></span></label>`).join('');
 $('colors').addEventListener('change',e=>{color=e.target.value});
 
+const GD=[["浅野町","あさのまち","東部管理センター","月 木","水2:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2水曜","第1火曜 第3火曜","第4水曜"],["浅野川","あさのがわ","東部管理センター","月 木","水4:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1火曜 第3火曜","第2水曜"],["粟崎","あわがさき","東部管理センター","火 金","木4:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4木曜","第1木曜 第3木曜","第2水曜"],["医王山","いおうぜん","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["泉野","いずみの","西部管理センター","月 木","金3:4-12/2-3 金4:1","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3金曜","第2金曜 第4金曜","第1水曜"],["内川","うちかわ","西部管理センター","月 木","金2:4-12/2-3 金3:1","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2金曜","第1金曜 第3金曜","第4水曜"],["扇台","おうぎだい","西部管理センター","火 金","木4:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4木曜","第1木曜 第3木曜","第2水曜"],["大浦","おおうら","東部管理センター","火 金","水2:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2水曜","第1月曜 第3月曜","第4水曜"],["大野町","おおのまち","東部管理センター","月 木","金4:4-12/2-3 金5:1","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4金曜","第1金曜 第3金曜","第2水曜"],["押野","おしの","西部管理センター","月 木","火2:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2火曜","第1火曜 第3火曜","第4水曜"],["金石町","かないわまち","東部管理センター","火 金","月4:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4月曜","第1月曜 第3月曜","第2水曜"],["菊川","きくがわ","西部管理センター","火 金","月2:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2月曜","第1月曜 第3月曜","第4水曜"],["木曳野","きびきの","東部管理センター","月 木","水1:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1水曜","第2火曜 第4火曜","第3水曜"],["鞍月","くらつき","東部管理センター","月 木","水3:4-3","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2金曜 第4金曜","第1水曜"],["小坂","こさか","東部管理センター","火 金","月2:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2月曜","第1月曜 第3月曜","第4水曜"],["小立野","こだつの","東部管理センター","火 金","水3:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3水曜","第2木曜 第4木曜","第1水曜"],["此花","このはな","東部管理センター","月 木","金1:4-12/2-3 金2:1","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1金曜","第2金曜 第4金曜","第3水曜"],["駒帰","こまがえり","西部管理センター","火 金","水1:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第1水曜","第1木曜 第3木曜","第4水曜"],["犀川","さいがわ","西部管理センター","火 金","水1:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1水曜","第2木曜 第4木曜","第3水曜"],["材木","ざいもく","東部管理センター","月 木","水4:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1火曜 第3火曜","第2水曜"],["四十万","しじま","西部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["十一屋","じゅういちや","西部管理センター","月 木","火3:4-3","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第3火曜","第1金曜 第3金曜","第4水曜"],["新神田","しんかんだ","西部管理センター","火 金","木3:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3木曜","第2木曜 第4木曜","第1水曜"],["新竪町","しんたてまち","西部管理センター","火 金","月1:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1月曜","第2月曜 第4月曜","第3水曜"],["西南部","せいなんぶ","西部管理センター","火 金","木2:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2木曜","第1木曜 第3木曜","第4水曜"],["大徳","だいとく","東部管理センター","火 金","水1:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1水曜","第2月曜 第4月曜","第3水曜"],["田上","たがみ","東部管理センター","月 木","金3:4-12/2-3 金4:1","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3金曜","第2金曜 第4金曜","第1水曜"],["俵","たわら","西部管理センター","月 木","金4:4-12/2-3 金5:1","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4金曜","第1火曜 第3火曜","第2水曜"],["千坂","ちさか","東部管理センター","火 金","水2:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2水曜","第1木曜 第3木曜","第4水曜"],["戸板","といた","東部管理センター","火 金","木3:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3木曜","第2木曜 第4木曜","第1水曜"],["富樫","とがし","西部管理センター","月 木","火4:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4火曜","第1火曜 第3火曜","第2水曜"],["長坂台","ながさかだい","西部管理センター","月 木","水4:4-3","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1金曜 第3金曜","第2水曜"],["長田町","ながたまち","東部管理センター","月 木","水4:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1火曜 第3火曜","第2水曜"],["長土塀","ながどへ","西部管理センター","月 木","水1:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1水曜","第2火曜 第4火曜","第3水曜"],["長町","ながまち","西部管理センター","月 木","水3:4-3","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2金曜 第4金曜","第1水曜"],["中村町","なかむらまち","西部管理センター","火 金","水4:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4水曜","第1木曜 第3木曜","第2水曜"],["西","にし","東部管理センター","月 木","金1:4-12/2-3 金2:1","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1金曜","第2金曜 第4金曜","第3水曜"],["額","ぬか","西部管理センター","火 金","木1:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1木曜","第2木曜 第4木曜","第3水曜"],["野町","のまち","西部管理センター","火 金","月4:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4月曜","第1月曜 第3月曜","第2水曜"],["花園","はなぞの","東部管理センター","月 木","水2:4-3","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2水曜","第1金曜 第3金曜","第4水曜"],["馬場","ばば","東部管理センター","月 木","火1:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1火曜","第2火曜 第4火曜","第3水曜"],["東浅川","ひがしあさかわ","西部管理センター","月 木","水3:4-3","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2金曜 第4金曜","第1水曜"],["瓢箪","ひょうたん","東部管理センター","月 木","水3:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2火曜 第4火曜","第1水曜"],["伏見台","ふしみだい","西部管理センター","火 金","水1:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1水曜","第2月曜 第4月曜","第3水曜"],["二塚","ふたつか","西部管理センター","月 木","水1:4-3","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1水曜","第2金曜 第4金曜","第3水曜"],["不動寺","ふどうじ","東部管理センター","月 木","金4:4-12/2-3 金5:1","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4金曜","第1金曜 第3金曜","第2水曜"],["芳斉","ほうさい","東部管理センター","火 金","木1:4-3","木2:4-3 木4:4-3 木5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1木曜","第2木曜 第4木曜","第3水曜"],["松ケ枝","まつがえ","東部管理センター","火 金","木2:4-3","木1:4-3 木3:4-3 木5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2木曜","第1木曜 第3木曜","第4水曜"],["味噌蔵","みそぐら","東部管理センター","月 木","水4:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1火曜 第3火曜","第2水曜"],["南小立野","みなみこだつの","西部管理センター","月 木","金1:4-12/2-3 金2:1","金2:4-12/2-3 金3:1 金4:4-12/2-3 金5:1 金5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1金曜","第2金曜 第4金曜","第3水曜"],["三和","みわ","西部管理センター","月 木","火1:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1火曜","第2火曜 第4火曜","第3水曜"],["三馬","みんま","西部管理センター","月 木","水3:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2火曜 第4火曜","第1水曜"],["森本","もりもと","東部管理センター","月 木","金2:4-12/2-3 金3:1","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2金曜","第1金曜 第3金曜","第4水曜"],["森山","もりやま","東部管理センター","火 金","月1:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水3:4-3","毎週火曜 毎週金曜","第1月曜","第2月曜 第4月曜","第3水曜"],["諸江","もろえ","東部管理センター","月 木","水1:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水3:4-3","毎週月曜 毎週木曜","第1水曜","第2火曜 第4火曜","第3水曜"],["安原（緑団地含む）","やすはら","西部管理センター","月 木","水2:4-3","火1:4-3 火3:4-3 火5:4-11/2-3","水4:4-3","毎週月曜 毎週木曜","第2水曜","第1火曜 第3火曜","第4水曜"],["弥生","やよい","西部管理センター","火 金","水4:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水2:4-3","毎週火曜 毎週金曜","第4水曜","第1月曜 第3月曜","第2水曜"],["夕日寺","ゆうひでら","東部管理センター","月 木","水3:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2火曜 第4火曜","第1水曜"],["湯涌","ゆわく","西部管理センター","月 木","水3:4-3","火2:4-3 火4:4-3 火5:4-11/2-3","水1:4-3","毎週月曜 毎週木曜","第3水曜","第2火曜 第4火曜","第1水曜"],["米泉","よないずみ","西部管理センター","月 木","水4:4-3","金1:4-12/2-3 金2:1 金3:4-12/2-3 金4:1 金5:4-11/2-3","水2:4-3","毎週月曜 毎週木曜","第4水曜","第1金曜 第3金曜","第2水曜"],["米丸","よねまる","西部管理センター","火 金","水2:4-3","月1:4-3 月3:4-3 月5:4-11/2-3","水4:4-3","毎週火曜 毎週金曜","第2水曜","第1月曜 第3月曜","第4水曜"],["朝日","あさひ","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["上平","うわだいら","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["清瀬","きよせ","西部管理センター","火 金","水2:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第2水曜","第2月曜 第4月曜","第1水曜"],["倉ケ嶽","くらがたけ","西部管理センター","火 金","水2:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第2水曜","第2月曜 第4月曜","第1水曜"],["坪野","つぼの","西部管理センター","火 金","水2:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第2水曜","第2月曜 第4月曜","第1水曜"],["平栗","ひらぐり","西部管理センター","火 金","水2:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第2水曜","第2月曜 第4月曜","第1水曜"],["竹又","たけまた","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["土子原","つちこはら","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["牧山","まきやま","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"],["三谷","みたに","東部管理センター","火 金","月3:4-3","月2:4-3 月4:4-3 月5:4-11/2-3","水1:4-3","毎週火曜 毎週金曜","第3月曜","第2月曜 第4月曜","第1水曜"]];
+const FY=['2026-04-01','2027-03-31'],REST=['2026-12-30','2027-01-03'];
+const GT=[{n:'燃やすごみ',s:'燃やす',c:'#d9482b'},{n:'燃やさないごみ',s:'燃やさない',c:'#2a6fd0'},{n:'資源',s:'資源',c:'#23865a'},{n:'びん',s:'びん',c:'#7a4bd1'}];
+const WD='日月火水木金土',DKEY='calendar-district-v1';
+let dist='';
+try{dist=localStorage.getItem(DKEY)||''}catch(e){}
+if(!GD.some(r=>r[0]===dist))dist='';
+function mOk(spec,m){return spec.split('/').some(p=>{const a=p.split('-').map(Number);if(a.length===1)return m===a[0];return a[0]<=a[1]?(m>=a[0]&&m<=a[1]):(m>=a[0]||m<=a[1])})}
+function hit(rule,wd,nth,m){return rule.split(/\s+/).filter(Boolean).some(t=>{const x=t.match(/^(.)(\d):(.+)$/);return x&&WD.indexOf(x[1])===wd&&+x[2]===nth&&mOk(x[3],m)})}
+function collect(k,row){
+  if(k<FY[0]||k>FY[1])return null;
+  if(k>=REST[0]&&k<=REST[1])return{rest:true,t:[]};
+  const [y,m,d]=k.split('-').map(Number);
+  const wd=new Date(y,m-1,d).getDay(),nth=Math.ceil(d/7),t=[];
+  if(row[3].split(/\s+/).some(w=>w&&WD.indexOf(w)===wd))t.push({i:0});
+  if(hit(row[4],wd,nth,m))t.push({i:1});
+  if(hit(row[5],wd,nth,m))t.push({i:2,p:d>=29});
+  if(hit(row[6],wd,nth,m))t.push({i:3});
+  return{t};
+}
+function curRow(){return GD.find(r=>r[0]===dist)}
+function gcell(k){
+  const row=curRow();if(!row)return{h:'',l:''};
+  const c=collect(k,row);if(!c)return{h:'',l:''};
+  if(c.rest)return{h:'<div class="gb"><span class="g rest">休止</span></div>',l:' ごみ収集休止'};
+  if(!c.t.length)return{h:'',l:''};
+  return{h:'<div class="gb">'+c.t.map(x=>`<span class="g" style="--g:${GT[x.i].c}">${x.p?'容プラ':GT[x.i].s}</span>`).join('')+'</div>',l:' ごみ収集：'+c.t.map(x=>GT[x.i].n+(x.p?'（容プラのみ）':'')).join('、')};
+}
+function renderG(){
+  const el=$('gdetail'),row=curRow();
+  $('legend').hidden=!row;
+  if(!row){el.innerHTML='';return}
+  const c=collect(sel,row);
+  let h='<h3 class="gh">'+esc(row[0])+'のごみ収集（'+esc(row[2])+'）</h3>';
+  if(!c)h+='<p class="gnone">収集日データは2026年度（2026年4月〜2027年3月）分のみです。</p>';
+  else if(c.rest)h+='<p class="gnone">年末年始のため収集はお休みです（12/30〜1/3）。</p>';
+  else if(!c.t.length)h+='<p class="gnone">この日の収集はありません。</p>';
+  else h+='<ul class="list">'+c.t.map(x=>`<li class="item" style="--c:${GT[x.i].c}"><span class="n">${GT[x.i].n}${x.p?'（容器包装プラスチックのみ）':''}</span></li>`).join('')+'</ul>';
+  h+='<details class="gsum"><summary>通常の収集日</summary><dl>'+GT.map((t,i)=>`<dt>${t.n}</dt><dd>${esc(row[7+i])}</dd>`).join('')+'</dl></details>';
+  el.innerHTML=h;
+}
+$('district').innerHTML='<option value="">地区を選択</option>'+[...GD].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(r=>`<option value="${esc(r[0])}">${esc(r[0])}</option>`).join('');
+$('district').value=dist;
+$('district').addEventListener('change',e=>{dist=e.target.value;try{localStorage.setItem(DKEY,dist)}catch(_){}render()});
+$('legend').innerHTML=GT.map(t=>`<span><i style="--g:${t.c}"></i>${t.n}</span>`).join('')+'<span><i class="rest"></i>休止</span><span>※29日以降の資源は容プラのみ</span>';
 function render(){
   const y=view.getFullYear(),m=view.getMonth();
   $('title').innerHTML=y+'年'+(m+1)+'月';
@@ -141,9 +220,9 @@ function render(){
     if(k===sel)cls.push('sel');
     if(d.getDay()===0)cls.push('sun');
     if(d.getDay()===6)cls.push('sat');
-    const shown=list.slice(0,3).map(e=>`<div class="ev" style="--c:${e.c}">${e.t?e.t+' ':''}${esc(e.n)}</div>`).join('');
+    const g=gcell(k);const shown=list.slice(0,3).map(e=>`<div class="ev" style="--c:${e.c}">${e.t?e.t+' ':''}${esc(e.n)}</div>`).join('');
     const more=list.length>3?`<div class="more">ほか${list.length-3}件</div>`:'';
-    h+=`<div class="${cls.join(' ')}" role="gridcell" tabindex="0" data-d="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日 予定${list.length}件"><span class="num">${d.getDate()}</span>${trash[k]?'<span class="tr">🗑<span class="trt"> ゴミの日</span></span>':''}${shown}${more}</div>`;
+    h+=`<div class="${cls.join(' ')}" role="gridcell" tabindex="0" data-d="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日 予定${list.length}件${g.l}"><span class="num">${d.getDate()}</span>${trash[k]?'<span class="tr">🗑<span class="trt"> ゴミの日</span></span>':''}${g.h}${shown}${more}</div>`;
   }
   $('grid').innerHTML=h;
   renderDay();
@@ -153,7 +232,7 @@ function renderDay(){
   const [y,m,d]=sel.split('-').map(Number);
   const dt=new Date(y,m-1,d);
   $('dayTitle').textContent=m+'月'+d+'日（'+DOW[dt.getDay()]+'）の予定';
-  $('memo').value=(memos[sel]||{}).t||'';updateBtn();
+  $('memo').value=(memos[sel]||{}).t||'';updateBtn();renderG();
   const list=events[sel]||[];
   $('list').innerHTML=list.length?list.map((e,i)=>`<li class="item" style="--c:${e.c}"><span class="t">${e.t||'終日'}</span><span class="n">${esc(e.n)}</span><button data-i="${i}" aria-label="${esc(e.n)}を削除">削除</button></li>`).join(''):'';
   if(!list.length)$('list').insertAdjacentHTML('afterend','');
@@ -181,22 +260,10 @@ $('list').addEventListener('click',e=>{
 });
 $('memo').addEventListener('input',e=>{const t=e.target.value;const o=memos[sel]||{};if(t.trim())memos[sel]={t,d:o.d};else delete memos[sel];saveMemos();updateBtn()});
 $('trashBtn').addEventListener('click',()=>{if(trash[sel])delete trash[sel];else trash[sel]=true;saveTrash();render()});
-function toggleQr(){qrHidden=!qrHidden;try{localStorage.setItem('calendar-qrhidden-v1',qrHidden?'1':'0')}catch(e){}updateBtn()}
-$('qrBtn').addEventListener('click',toggleQr);$('qrClose').addEventListener('click',toggleQr);
-(function(){
-const box=$('qr');let pos=null;
-try{pos=JSON.parse(localStorage.getItem('calendar-qrpos-v1')||'null')}catch(e){}
-function clamp(x,y){const w=box.offsetWidth||140,h=box.offsetHeight||140;return [Math.min(Math.max(0,x),Math.max(0,innerWidth-w)),Math.min(Math.max(0,y),Math.max(0,innerHeight-h))]}
-function apply(){if(!pos)return;const c=clamp(pos.x,pos.y);box.style.left=c[0]+'px';box.style.top=c[1]+'px';box.style.bottom='auto'}
-apply();
-let sx=0,sy=0,ox=0,oy=0,drag=false;
-box.addEventListener('pointerdown',e=>{if(e.target.closest('#qrClose'))return;const r=box.getBoundingClientRect();drag=true;sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;box.setPointerCapture(e.pointerId);box.classList.add('drag')});
-box.addEventListener('pointermove',e=>{if(!drag)return;const c=clamp(ox+e.clientX-sx,oy+e.clientY-sy);pos={x:c[0],y:c[1]};apply()});
-const end=()=>{if(!drag)return;drag=false;box.classList.remove('drag');if(pos){try{localStorage.setItem('calendar-qrpos-v1',JSON.stringify(pos))}catch(e){}}};
-box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
-box.addEventListener('dblclick',e=>{if(e.target.closest('#qrClose'))return;pos=null;box.style.left='';box.style.top='';box.style.bottom='';try{localStorage.removeItem('calendar-qrpos-v1')}catch(err){}});
-addEventListener('resize',apply);
-})();
+document.getElementById('qrClose').onclick=()=>{qrHide=true;updateBtn()};
+document.getElementById('qr').addEventListener('click',e=>{if(e.target===e.currentTarget){qrHide=true;updateBtn()}});
+document.getElementById('qrOpen').onclick=()=>{qrHide=false;updateBtn()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('qr').classList.contains('show')){qrHide=true;updateBtn()}});
 render();
 </script>
 </body>
