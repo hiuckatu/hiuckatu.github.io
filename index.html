@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>カレンダー</title>
+<style>
+:root{--bg:#eef1f5;--surface:#fff;--ink:#1c2733;--sub:#6b7785;--line:#dde3ea;--accent:#2457d6;--accent-ink:#fff;--sun:#d33b4a;--sat:#2a6fd0;--today:#e8efff;--other:#f7f9fb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--surface:#18212b;--ink:#e8edf2;--sub:#93a0ad;--line:#2a3643;--accent:#6c93ff;--accent-ink:#0c1320;--sun:#ff7a86;--sat:#79a8ff;--today:#1f2e4d;--other:#141c25}}
+:root[data-theme="dark"]{--bg:#10161d;--surface:#18212b;--ink:#e8edf2;--sub:#93a0ad;--line:#2a3643;--accent:#6c93ff;--accent-ink:#0c1320;--sun:#ff7a86;--sat:#79a8ff;--today:#1f2e4d;--other:#141c25}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;line-height:1.5}
+.app{max-width:960px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+h1{font-size:1.6rem;margin:0 auto 0 0;font-weight:700;letter-spacing:.02em}
+h1 small{font-size:.9rem;color:var(--sub);font-weight:400;margin-left:6px}
+button{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,.cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);background:var(--line);gap:1px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.dow{background:var(--surface);text-align:center;padding:8px 0;font-size:.85rem;color:var(--sub)}
+.dow:first-child,.cell.sun .num{color:var(--sun)}
+.dow:nth-child(7),.cell.sat .num{color:var(--sat)}
+.cell{background:var(--surface);min-height:92px;padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left}
+.cell.out{background:var(--other)}
+.cell.out .num{opacity:.45}
+.cell.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.num{font-size:.9rem;width:26px;height:26px;display:grid;place-items:center;border-radius:50%}
+.cell.today .num{background:var(--accent);color:var(--accent-ink)}
+.cell.today{background:var(--today)}
+.ev{font-size:.72rem;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.more{font-size:.7rem;color:var(--sub)}
+.panel{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.panel h2{margin:0 0 10px;font-size:1.1rem}
+.list{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:6px}
+.item{display:flex;align-items:center;gap:10px;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:6px 10px;border-radius:6px}
+.item .t{color:var(--sub);font-size:.85rem;min-width:3.2em}
+.item .n{flex:1;min-width:0;overflow-wrap:anywhere}
+.item button{padding:2px 8px;font-size:.8rem}
+.empty{color:var(--sub);margin:0 0 14px}
+form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text]{flex:1 1 180px;min-width:0;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=time]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.colors{display:flex;gap:6px}
+.colors label{cursor:pointer}
+.colors input{position:absolute;opacity:0}
+.colors span{display:block;width:22px;height:22px;border-radius:50%;background:var(--c);border:2px solid transparent}
+.colors input:checked+span{border-color:var(--ink)}
+.colors input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+textarea{display:block;width:100%;min-height:64px;margin:0 0 14px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;resize:vertical}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#trash{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:10px 16px;border-radius:999px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
+#trash[aria-pressed="true"]{background:var(--surface);color:var(--ink);border-color:var(--accent)}
+@media (max-width:600px){.app{padding:10px}.cell{min-height:64px;padding:3px}.ev{font-size:0;height:6px;padding:0;border:0;background:var(--c);border-radius:3px}.num{width:22px;height:22px;font-size:.8rem}h1{font-size:1.3rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="title"></h1>
+    <button id="prev" aria-label="前の月">‹</button>
+    <button id="today">今日</button>
+    <button id="next" aria-label="次の月">›</button>
+  </header>
+  <div class="grid" id="grid" role="grid"></div>
+  <section class="panel" aria-live="polite">
+    <h2 id="dayTitle"></h2>
+    <ul class="list" id="list"></ul>
+    <textarea id="memo" placeholder="この日のメモ（例：ゴミの日）" maxlength="300" aria-label="この日のメモ"></textarea>
+    <form id="form">
+      <input type="text" id="name" placeholder="予定のタイトル" maxlength="60" required aria-label="予定のタイトル">
+      <input type="time" id="time" aria-label="時刻">
+      <div class="colors" id="colors"></div>
+      <button class="primary" type="submit">予定を追加</button>
+    </form>
+  </section>
+</div>
+<button id="trash" type="button" hidden aria-pressed="false"></button>
+<script>
+const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
+const KEY='calendar-events-v1';
+const DOW=['日','月','火','水','木','金','土'];
+let events={};
+try{events=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){events={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(events))}catch(e){}}
+let memos={};
+try{memos=JSON.parse(localStorage.getItem('calendar-memos-v1')||'{}')}catch(e){memos={}}
+function saveMemos(){try{localStorage.setItem('calendar-memos-v1',JSON.stringify(memos))}catch(e){}}
+function updateBtn(){const m=memos[sel]||{};const b=document.getElementById('trash');b.hidden=!(m.t||'').includes('ゴミの日');b.textContent=m.d?'ゴミ出し済み ✓':'ゴミ出しした';b.setAttribute('aria-pressed',String(!!m.d))}
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const now=new Date();
+let view=new Date(now.getFullYear(),now.getMonth(),1);
+let sel=ymd(now);
+let color=COLORS[0];
+
+const $=id=>document.getElementById(id);
+$('colors').innerHTML=COLORS.map((c,i)=>`<label><input type="radio" name="col" value="${c}" ${i?'':'checked'} aria-label="色 ${i+1}"><span style="--c:${c}"></span></label>`).join('');
+$('colors').addEventListener('change',e=>{color=e.target.value});
+
+function render(){
+  const y=view.getFullYear(),m=view.getMonth();
+  $('title').innerHTML=y+'年'+(m+1)+'月';
+  const first=new Date(y,m,1);
+  const start=new Date(y,m,1-first.getDay());
+  const rows=Math.ceil((first.getDay()+new Date(y,m+1,0).getDate())/7);
+  let h=DOW.map(d=>`<div class="dow" role="columnheader">${d}</div>`).join('');
+  for(let i=0;i<rows*7;i++){
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    const k=ymd(d),list=events[k]||[];
+    const cls=['cell'];
+    if(d.getMonth()!==m)cls.push('out');
+    if(k===ymd(now))cls.push('today');
+    if(k===sel)cls.push('sel');
+    if(d.getDay()===0)cls.push('sun');
+    if(d.getDay()===6)cls.push('sat');
+    const shown=list.slice(0,3).map(e=>`<div class="ev" style="--c:${e.c}">${e.t?e.t+' ':''}${esc(e.n)}</div>`).join('');
+    const more=list.length>3?`<div class="more">ほか${list.length-3}件</div>`:'';
+    h+=`<div class="${cls.join(' ')}" role="gridcell" tabindex="0" data-d="${k}" aria-label="${d.getMonth()+1}月${d.getDate()}日 予定${list.length}件"><span class="num">${d.getDate()}</span>${shown}${more}</div>`;
+  }
+  $('grid').innerHTML=h;
+  renderDay();
+}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderDay(){
+  const [y,m,d]=sel.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  $('dayTitle').textContent=m+'月'+d+'日（'+DOW[dt.getDay()]+'）の予定';
+  $('memo').value=(memos[sel]||{}).t||'';updateBtn();
+  const list=events[sel]||[];
+  $('list').innerHTML=list.length?list.map((e,i)=>`<li class="item" style="--c:${e.c}"><span class="t">${e.t||'終日'}</span><span class="n">${esc(e.n)}</span><button data-i="${i}" aria-label="${esc(e.n)}を削除">削除</button></li>`).join(''):'';
+  if(!list.length)$('list').insertAdjacentHTML('afterend','');
+  const old=document.querySelector('.empty');if(old)old.remove();
+  if(!list.length)$('list').insertAdjacentHTML('beforebegin','<p class="empty">この日の予定はありません。下のフォームから追加できます。</p>');
+}
+function pick(k){sel=k;const [y,m]=k.split('-').map(Number);if(y!==view.getFullYear()||m-1!==view.getMonth())view=new Date(y,m-1,1);render()}
+$('grid').addEventListener('click',e=>{const c=e.target.closest('.cell');if(c)pick(c.dataset.d)});
+$('grid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset.d){e.preventDefault();pick(e.target.dataset.d);const c=document.querySelector(`[data-d="${sel}"]`);if(c)c.focus()}});
+$('prev').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);render()};
+$('next').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);render()};
+$('today').onclick=()=>{view=new Date(now.getFullYear(),now.getMonth(),1);sel=ymd(now);render()};
+$('form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const n=$('name').value.trim();if(!n)return;
+  (events[sel]=events[sel]||[]).push({n,t:$('time').value,c:color});
+  events[sel].sort((a,b)=>(a.t||'').localeCompare(b.t||''));
+  save();$('name').value='';$('time').value='';render();$('name').focus();
+});
+$('list').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  events[sel].splice(+b.dataset.i,1);
+  if(!events[sel].length)delete events[sel];
+  save();render();
+});
+$('memo').addEventListener('input',e=>{const t=e.target.value;const o=memos[sel]||{};if(t.trim())memos[sel]={t,d:o.d};else delete memos[sel];saveMemos();updateBtn()});
+$('trash').addEventListener('click',()=>{const o=memos[sel];if(!o)return;o.d=!o.d;saveMemos();updateBtn()});
+render();
+</script>
+</body>
+</html>
