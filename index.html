@@ -144,7 +144,7 @@ function updateBtn(){const m=memos[sel]||{};const t=m.t||'';
 const on=!!trash[sel];const tb=document.getElementById('trashBtn');tb.setAttribute('aria-pressed',String(on));tb.textContent=on?'ゴミの日を解除':'ゴミの日にする';
 const row=curRow(),c=row?collect(sel,row):null,auto=c&&c.t?c.t.map(x=>GT[x.i].n):[];
 const op=document.getElementById('qrOpen');
-if(!(on||auto.length)||typeof QRCode==='undefined'){setQR(false);op.hidden=true;return}
+if(sel!==ymd(now)||!(on||auto.length)||typeof QRCode==='undefined'){setQR(false);op.hidden=true;return}
 const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(auto.length?'\n'+auto.join('・'):'')+(t?'\n'+t:'');
 if(q!==qrText){qrText=q;const cd=document.getElementById('qrcode');
 try{cd.innerHTML='';new QRCode(cd,{text:unescape(encodeURIComponent(q)),width:320,height:320,correctLevel:QRCode.CorrectLevel.L})}catch(e){setQR(false);op.hidden=true;qrText='';return}}
