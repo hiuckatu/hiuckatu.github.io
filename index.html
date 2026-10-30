@@ -123,7 +123,6 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   <div class="qrbox"><button id="qrClose" type="button" aria-label="QRコードを閉じる">✕</button><div id="qrcode" role="img" aria-label="ゴミの日のQRコード"></div></div>
 </div>
 <button id="qrOpen" type="button" hidden>QRを表示</button>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
 const KEY='calendar-events-v1';
@@ -144,10 +143,10 @@ function updateBtn(){const m=memos[sel]||{};const t=m.t||'';
 const on=!!trash[sel];const tb=document.getElementById('trashBtn');tb.setAttribute('aria-pressed',String(on));tb.textContent=on?'ゴミの日を解除':'ゴミの日にする';
 const row=curRow(),c=row?collect(sel,row):null,auto=c&&c.t?c.t.map(x=>GT[x.i].n):[];
 const op=document.getElementById('qrOpen');
-if(sel!==ymd(now)||!(on||auto.length)||typeof QRCode==='undefined'){setQR(false);op.hidden=true;return}
-const sp=sel.split('-').map(Number);const q='ゴミの日 '+sp[1]+'/'+sp[2]+(auto.length?'\n'+auto.join('・'):'')+(t?'\n'+t:'');
-if(q!==qrText){qrText=q;const cd=document.getElementById('qrcode');
-try{cd.innerHTML='';new QRCode(cd,{text:unescape(encodeURIComponent(q)),width:320,height:320,correctLevel:QRCode.CorrectLevel.L})}catch(e){setQR(false);op.hidden=true;qrText='';return}}
+const ti=c&&c.t?c.t.map(x=>x.i):[];const src=ti.includes(0)?'qrkanazawa.png':ti.includes(1)?'qrkanazawamoenai.png':'';
+if(sel!==ymd(now)||!src){setQR(false);op.hidden=true;return}
+if(src!==qrText){qrText=src;const cd=document.getElementById('qrcode');cd.innerHTML='';
+const im=new Image();im.alt='ゴミの日のQRコード';im.onerror=()=>{setQR(false);op.hidden=true;qrText=''};im.src=src;cd.appendChild(im)}
 setQR(!qrHide);op.hidden=!qrHide}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
