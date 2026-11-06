@@ -28,7 +28,10 @@ header.site{background:var(--surface);border-bottom:1px solid var(--line);paddin
 .help li{margin:4px 0}
 .help p{margin:6px 0}
 .help .note{font-size:.85rem;color:var(--sub)}
-body.on-help #qr,body.on-help #qrOpen{display:none}
+body.off-top #qr,body.off-top #qrOpen{display:none}
+.dl{display:inline-block;margin:6px 0;padding:8px 14px;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-weight:600;text-decoration:none}
+.dl:hover{background:var(--accent);color:var(--accent-ink)}
+.help a:not(.dl){color:var(--accent);word-break:break-all}
 .calnav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 h1{font-size:1.6rem;margin:0 auto 0 0;font-weight:700;letter-spacing:.02em}
 h1 small{font-size:.9rem;color:var(--sub);font-weight:400;margin-left:6px}
@@ -118,6 +121,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <div class="tabs" role="tablist" aria-label="ページ切り替え">
       <button class="tab" role="tab" id="tabTop" aria-controls="panelTop" aria-selected="true" type="button">トップページ</button>
       <button class="tab" role="tab" id="tabHelp" aria-controls="panelHelp" aria-selected="false" tabindex="-1" type="button">使い方</button>
+      <button class="tab" role="tab" id="tabMore" aria-controls="panelMore" aria-selected="false" tabindex="-1" type="button">その他</button>
     </div>
   </div>
 </header>
@@ -184,6 +188,18 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     <p class="note">メモや予定、地区の設定は、お使いの端末のブラウザに保存されます。別の端末とは共有されません。</p>
   </section>
 </div>
+<div class="app help" id="panelMore" role="tabpanel" aria-labelledby="tabMore" hidden>
+  <section class="panel">
+    <h2>カレンダーのデータについて</h2>
+    <p>ごみ収集日のデータは、金沢市のオープンデータ「地区別ごみ収集日」をもとにしています。</p>
+    <p><a href="https://catalog-data.city.kanazawa.ishikawa.jp/fr/dataset/172014-chikubetu" target="_blank" rel="noopener noreferrer">金沢市オープンデータカタログ（地区別ごみ収集日）</a></p>
+
+    <h2>データのダウンロード</h2>
+    <p>このカレンダーで使っている2026年の収集日データ（CSV）をダウンロードできます。</p>
+    <p><a class="dl" href="schedule2026.csv" download="schedule2026.csv">schedule2026.csv をダウンロード</a></p>
+    <p class="note">収集日は変更される場合があります。最新の情報は金沢市の公式情報でご確認ください。</p>
+  </section>
+</div>
 <div id="qr" role="dialog" aria-modal="true" aria-label="ゴミの日のQRコード" aria-hidden="true">
   <div class="qrbox"><button id="qrClose" type="button" aria-label="QRコードを閉じる">✕</button><div id="qrcode" role="img" aria-label="ゴミの日のQRコード"></div></div>
 </div>
@@ -191,20 +207,23 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 <script>
 /* タブ切り替え */
 (function(){
-  const tabs=[document.getElementById('tabTop'),document.getElementById('tabHelp')];
-  const panels=[document.getElementById('panelTop'),document.getElementById('panelHelp')];
+  const ids=['Top','Help','More'];
+  const tabs=ids.map(n=>document.getElementById('tab'+n));
+  const panels=ids.map(n=>document.getElementById('panel'+n));
+  const N=ids.length;
   function show(i,focus){
     tabs.forEach((t,k)=>{t.setAttribute('aria-selected',String(k===i));t.tabIndex=k===i?0:-1;panels[k].hidden=k!==i});
-    document.body.classList.toggle('on-help',i===1);
+    document.body.classList.toggle('off-top',i!==0);
     if(focus)tabs[i].focus();
     window.scrollTo(0,0);
   }
   tabs.forEach((t,i)=>{
     t.addEventListener('click',()=>show(i));
     t.addEventListener('keydown',e=>{
-      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();show((i+1)%2,true)}
+      if(e.key==='ArrowRight'){e.preventDefault();show((i+1)%N,true)}
+      else if(e.key==='ArrowLeft'){e.preventDefault();show((i+N-1)%N,true)}
       else if(e.key==='Home'){e.preventDefault();show(0,true)}
-      else if(e.key==='End'){e.preventDefault();show(1,true)}
+      else if(e.key==='End'){e.preventDefault();show(N-1,true)}
     });
   });
 })();
