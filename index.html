@@ -13,7 +13,23 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;line-height:1.5}
 .app{max-width:960px;margin:0 auto;padding:16px}
-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+header.site{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px 0}
+.site .in{max-width:960px;margin:0 auto}
+.brand{font-size:1.15rem;font-weight:700;letter-spacing:.02em;margin:0 0 6px}
+.tabs{display:flex;gap:4px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;padding:8px 16px;font-weight:600;color:var(--sub)}
+.tab:hover{color:var(--ink);border-color:transparent;background:var(--bg)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+[role="tabpanel"][hidden]{display:none}
+.help h2{font-size:1.1rem;margin:20px 0 6px}
+.help h2:first-child{margin-top:0}
+.help ol,.help ul{margin:6px 0;padding-left:1.4em}
+.help li{margin:4px 0}
+.help p{margin:6px 0}
+.help .note{font-size:.85rem;color:var(--sub)}
+body.on-help #qr,body.on-help #qrOpen{display:none}
+.calnav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 h1{font-size:1.6rem;margin:0 auto 0 0;font-weight:700;letter-spacing:.02em}
 h1 small{font-size:.9rem;color:var(--sub);font-weight:400;margin-left:6px}
 button{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
@@ -96,13 +112,22 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
+<header class="site">
+  <div class="in">
+    <p class="brand">ごみ捨てチェッカー</p>
+    <div class="tabs" role="tablist" aria-label="ページ切り替え">
+      <button class="tab" role="tab" id="tabTop" aria-controls="panelTop" aria-selected="true" type="button">トップページ</button>
+      <button class="tab" role="tab" id="tabHelp" aria-controls="panelHelp" aria-selected="false" tabindex="-1" type="button">使い方</button>
+    </div>
+  </div>
+</header>
+<div class="app" id="panelTop" role="tabpanel" aria-labelledby="tabTop">
+  <div class="calnav">
     <h1 id="title"></h1>
     <button id="prev" aria-label="前の月">‹</button>
     <button id="today">今日</button>
     <button id="next" aria-label="次の月">›</button>
-  </header>
+  </div>
   <div class="gbar">
     <label>地区 <select id="district" aria-label="地区"></select></label>
     <span class="dhint" id="dhint" role="status" hidden>↑ 地区を選択してください</span>
@@ -122,11 +147,67 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     </form>
   </section>
 </div>
+<div class="app help" id="panelHelp" role="tabpanel" aria-labelledby="tabHelp" hidden>
+  <section class="panel">
+    <h2>はじめに</h2>
+    <ol>
+      <li>「トップページ」の「地区」から、お住まいの地区を選びます。</li>
+      <li>選んだ地区のごみ収集日が、カレンダーに色付きの印で表示されます。</li>
+      <li>地区は端末に保存されるので、次回からは選び直さなくても大丈夫です。</li>
+    </ol>
+
+    <h2>カレンダーの見方</h2>
+    <ul>
+      <li>燃やすごみ・燃やさないごみ・資源・びんが、それぞれ色の違う印で表示されます。色の意味は地区の下の凡例で確認できます。</li>
+      <li>「休止」の日はごみの収集がお休みです。</li>
+      <li>資源は29日以降は容プラのみの収集です。</li>
+      <li>「‹」「›」で前の月・次の月に移動できます。「今日」を押すと今日の日付に戻ります。</li>
+      <li>スマートフォンでは、カレンダーを左右にスワイプしても月を切り替えられます（左へ＝翌月、右へ＝前月）。</li>
+    </ul>
+
+    <h2>日付を選ぶ</h2>
+    <p>カレンダーの日付をタップすると、下の欄にその日のごみの種類や予定が表示されます。</p>
+
+    <h2>QRコードの表示</h2>
+    <ul>
+      <li>今日が燃やすごみ・燃やさないごみ・資源・びんのいずれかの収集日のとき、その種類に合わせたQRコードが自動で表示されます。</li>
+      <li>今日以外の日付ではQRコードは表示されません。</li>
+      <li>「✕」や画面の外側をタップすると閉じます。もう一度見たいときは、左下の「QRを表示」を押します。</li>
+    </ul>
+
+    <h2>メモと予定</h2>
+    <ul>
+      <li>選んだ日のメモを入力できます。</li>
+      <li>「予定のタイトル」を入れ、必要なら時刻と色を選んで「予定を追加」を押すと、その日に予定が追加されます。</li>
+      <li>「ゴミの日にする」を押すと、その日を自分で「ゴミの日」として記録できます。もう一度押すと解除されます。</li>
+    </ul>
+    <p class="note">メモや予定、地区の設定は、お使いの端末のブラウザに保存されます。別の端末とは共有されません。</p>
+  </section>
+</div>
 <div id="qr" role="dialog" aria-modal="true" aria-label="ゴミの日のQRコード" aria-hidden="true">
   <div class="qrbox"><button id="qrClose" type="button" aria-label="QRコードを閉じる">✕</button><div id="qrcode" role="img" aria-label="ゴミの日のQRコード"></div></div>
 </div>
 <button id="qrOpen" type="button" hidden>QRを表示</button>
 <script>
+/* タブ切り替え */
+(function(){
+  const tabs=[document.getElementById('tabTop'),document.getElementById('tabHelp')];
+  const panels=[document.getElementById('panelTop'),document.getElementById('panelHelp')];
+  function show(i,focus){
+    tabs.forEach((t,k)=>{t.setAttribute('aria-selected',String(k===i));t.tabIndex=k===i?0:-1;panels[k].hidden=k!==i});
+    document.body.classList.toggle('on-help',i===1);
+    if(focus)tabs[i].focus();
+    window.scrollTo(0,0);
+  }
+  tabs.forEach((t,i)=>{
+    t.addEventListener('click',()=>show(i));
+    t.addEventListener('keydown',e=>{
+      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();show((i+1)%2,true)}
+      else if(e.key==='Home'){e.preventDefault();show(0,true)}
+      else if(e.key==='End'){e.preventDefault();show(1,true)}
+    });
+  });
+})();
 const COLORS=['#2457d6','#e0663a','#2f9e6b','#9b51e0','#d6a31a'];
 const KEY='calendar-events-v1';
 const DOW=['日','月','火','水','木','金','土'];
