@@ -74,7 +74,7 @@ select:hover{border-color:var(--accent)}
 select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .legend{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center;font-size:.75rem;color:var(--sub)}
 .legend[hidden]{display:none}
-.dhint{font-size:.85rem;color:var(--accent);font-weight:600}
+.dhint{font-size:.85rem;color:#d92d20;font-weight:600}
 .dhint[hidden]{display:none}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .legend i{width:10px;height:10px;border-radius:50%;background:var(--g)}
@@ -105,7 +105,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   </header>
   <div class="gbar">
     <label>地区 <select id="district" aria-label="地区"></select></label>
-    <span class="dhint" id="dhint" role="status" hidden>← 地区を選択してください</span>
+    <span class="dhint" id="dhint" role="status" hidden>↑ 地区を選択してください</span>
     <div class="legend" id="legend" hidden></div>
   </div>
   <div class="grid" id="grid" role="grid"></div>
